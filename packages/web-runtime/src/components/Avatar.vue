@@ -62,9 +62,10 @@ export default {
     }
   },
   computed: {
-    ...mapGetters(['getToken', 'configuration']),
+    ...mapGetters(['getToken', ['capabilities', 'configuration']]),
+
     enabled: function() {
-      return this.configuration.enableAvatars || true
+      return this.capabilities.file_sharing.user.profile_picture
     }
   },
   watch: {
