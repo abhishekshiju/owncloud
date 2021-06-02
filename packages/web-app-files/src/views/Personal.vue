@@ -45,13 +45,13 @@
           >
             <span id="files-list-count-folders" v-text="activeFilesCount.folders" />
             <translate :translate-n="activeFilesCount.folders" translate-plural="folders"
-              >folder</translate
-            >
+              >folder
+            </translate>
             <translate>and</translate>
             <span id="files-list-count-files" v-text="activeFilesCount.files" />
             <translate :translate-n="activeFilesCount.files" translate-plural="files"
-              >file</translate
-            >
+              >file
+            </translate>
             <template v-if="activeFiles.length > 0">
               &ndash; {{ getResourceSize(filesTotalSize) }}
             </template>
@@ -143,9 +143,19 @@ export default {
 
   watch: {
     $route: {
-      handler: function(to, from) {
+      handler: function() {
+        if (isNil(this.$route.params.item)) {
+          this.$router.push({
+            name: 'files-personal',
+            params: {
+              item: this.homeFolder
+            }
+          })
+
+          return
+        }
+
         const sameRoute = to.name === from?.name
-        this.checkHomeFallback()
         this.loadResources(sameRoute)
       },
       immediate: true
@@ -173,17 +183,6 @@ export default {
       'CLEAR_CURRENT_FILES_LIST'
     ]),
     ...mapMutations(['SET_QUOTA']),
-
-    checkHomeFallback() {
-      if (isNil(this.$route.params.item)) {
-        this.$router.push({
-          name: 'files-personal',
-          params: {
-            item: this.homeFolder
-          }
-        })
-      }
-    },
 
     async loadResources(sameRoute) {
       this.loading = true
