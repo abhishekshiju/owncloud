@@ -32,13 +32,13 @@
           >
             <span id="files-list-count-folders" v-text="activeFilesCount.folders" />
             <translate :translate-n="activeFilesCount.folders" translate-plural="folders"
-              >folder</translate
-            >
+              >folder
+            </translate>
             <translate>and</translate>
             <span id="files-list-count-files" v-text="activeFilesCount.files" />
             <translate :translate-n="activeFilesCount.files" translate-plural="files"
-              >file</translate
-            >
+              >file
+            </translate>
             <template v-if="activeFiles.length > 0">
               &ndash; {{ getResourceSize(filesTotalSize) }}
             </template>
@@ -69,7 +69,6 @@ export default {
   data: () => ({
     loading: true
   }),
-
   computed: {
     ...mapState(['app']),
     ...mapGetters('Files', [

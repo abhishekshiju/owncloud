@@ -89,7 +89,7 @@ export default {
           if (!path) {
             return path
           }
-          var parts = path.split('/').map(part => encodeURIComponent(part))
+          const parts = path.split('/').map(part => encodeURIComponent(part))
           return parts.join('/')
         },
         triggerDownload(url, name) {
