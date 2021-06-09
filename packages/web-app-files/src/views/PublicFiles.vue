@@ -29,6 +29,7 @@
         :header-position="headerPosition"
         @showDetails="setHighlightedFile"
         @fileClick="$_fileActions_triggerDefaultAction"
+        @rowMounted="rowMounted"
       >
         <template #footer>
           <div
@@ -66,7 +67,10 @@ import { buildResource } from '../helpers/resources'
 import ListLoader from '../components/ListLoader.vue'
 import NoContentMessage from '../components/NoContentMessage.vue'
 import NotFoundMessage from '../components/FilesLists/NotFoundMessage.vue'
+import { VisibilityObserver } from 'web-pkg/src/observer'
+import { debounce } from 'web-pkg/src/utils'
 
+const visibilityObserver = new VisibilityObserver()
 export default {
   components: {
     ListLoader,
@@ -142,15 +146,34 @@ export default {
       this.adjustTableHeaderPosition()
     }
   },
-
+  beforeDestroy() {
+    visibilityObserver.disconnect()
+  },
   methods: {
-    ...mapActions('Files', ['setHighlightedFile', 'loadPreviews']),
+    ...mapActions('Files', ['setHighlightedFile', 'loadPreview']),
     ...mapMutations('Files', [
       'SELECT_RESOURCES',
       'SET_CURRENT_FOLDER',
       'LOAD_FILES',
       'CLEAR_CURRENT_FILES_LIST'
     ]),
+
+    rowMounted(resource, component) {
+      if (!this.displayPreviews) {
+        return
+      }
+
+      const debounced = debounce(({ unobserve }) => {
+        unobserve()
+        this.loadPreview({
+          resource,
+          isPublic: true,
+          dimensions: [25, 25]
+        })
+      })
+
+      visibilityObserver.observe(component.$el, { onEnter: debounced, onExit: debounced.cancel })
+    },
 
     async loadResources(sameRoute) {
       this.loading = true
@@ -185,15 +208,6 @@ export default {
 
         resources = resources.map(buildResource)
         this.LOAD_FILES({ currentFolder: resources[0], files: resources.slice(1) })
-
-        if (this.displayPreviews) {
-          this.loadPreviews({
-            resources,
-            isPublic: true,
-            mediaSource: this.mediaSource,
-            encodePath: this.encodePath
-          })
-        }
 
         this.adjustTableHeaderPosition()
         window.onresize = this.adjustTableHeaderPosition

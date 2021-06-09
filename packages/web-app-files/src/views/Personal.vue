@@ -29,6 +29,7 @@
         :header-position="headerPosition"
         @showDetails="setHighlightedFile"
         @fileClick="$_fileActions_triggerDefaultAction"
+        @rowMounted="rowMounted"
       >
         <template v-slot:quickActions="{ resource }">
           <quick-actions
@@ -77,6 +78,10 @@ import QuickActions from '../components/FilesLists/QuickActions.vue'
 import ListLoader from '../components/ListLoader.vue'
 import NoContentMessage from '../components/NoContentMessage.vue'
 import NotFoundMessage from '../components/FilesLists/NotFoundMessage.vue'
+import { VisibilityObserver } from 'web-pkg/src/observer'
+import { debounce } from 'web-pkg/src/utils'
+
+const visibilityObserver = new VisibilityObserver()
 
 export default {
   components: { QuickActions, ListLoader, NoContentMessage, NotFoundMessage },
@@ -174,8 +179,12 @@ export default {
     this.adjustTableHeaderPosition()
   },
 
+  beforeDestroy() {
+    visibilityObserver.disconnect()
+  },
+
   methods: {
-    ...mapActions('Files', ['setHighlightedFile', 'loadIndicators', 'loadPreviews']),
+    ...mapActions('Files', ['setHighlightedFile', 'loadIndicators', 'loadPreview']),
     ...mapMutations('Files', [
       'SELECT_RESOURCES',
       'SET_CURRENT_FOLDER',
@@ -183,6 +192,23 @@ export default {
       'CLEAR_CURRENT_FILES_LIST'
     ]),
     ...mapMutations(['SET_QUOTA']),
+
+    rowMounted(resource, component) {
+      if (!this.displayPreviews) {
+        return
+      }
+
+      const debounced = debounce(({ unobserve }) => {
+        unobserve()
+        this.loadPreview({
+          resource,
+          isPublic: false,
+          dimensions: [25, 25]
+        })
+      })
+
+      visibilityObserver.observe(component.$el, { onEnter: debounced, onExit: debounced.cancel })
+    },
 
     async loadResources(sameRoute) {
       this.loading = true
@@ -196,17 +222,14 @@ export default {
         )
 
         resources = resources.map(buildResource)
-        this.LOAD_FILES({ currentFolder: resources[0], files: resources.slice(1) })
-        this.loadIndicators({ client: this.$client, currentFolder: this.$route.params.item })
-
-        if (this.displayPreviews) {
-          this.loadPreviews({
-            resources,
-            isPublic: false,
-            mediaSource: this.mediaSource,
-            encodePath: this.encodePath
-          })
-        }
+        this.LOAD_FILES({
+          currentFolder: resources[0],
+          files: resources.slice(1)
+        })
+        this.loadIndicators({
+          client: this.$client,
+          currentFolder: this.$route.params.item
+        })
 
         // Load quota
         const user = await this.$client.users.getUser(this.user.id)
@@ -222,7 +245,6 @@ export default {
       this.accessibleBreadcrumb_focusAndAnnounceBreadcrumb(sameRoute)
       this.scrollToResourceFromRoute()
     },
-
     scrollToResourceFromRoute() {
       const resourceName = this.$route.query.scrollTo
 

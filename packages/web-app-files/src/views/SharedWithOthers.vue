@@ -27,6 +27,7 @@
         :header-position="headerPosition"
         @showDetails="setHighlightedFile"
         @fileClick="$_fileActions_triggerDefaultAction"
+        @rowMounted="rowMounted"
       >
         <template #footer>
           <div
@@ -59,6 +60,10 @@ import MixinResources from '../mixins/resources'
 
 import ListLoader from '../components/ListLoader.vue'
 import NoContentMessage from '../components/NoContentMessage.vue'
+import { VisibilityObserver } from 'web-pkg/src/observer'
+import { debounce } from 'web-pkg/src/utils'
+
+const visibilityObserver = new VisibilityObserver()
 
 export default {
   components: { ListLoader, NoContentMessage },
@@ -126,8 +131,12 @@ export default {
     this.adjustTableHeaderPosition()
   },
 
+  beforeDestroy() {
+    visibilityObserver.disconnect()
+  },
+
   methods: {
-    ...mapActions('Files', ['setHighlightedFile', 'loadIndicators', 'loadPreviews']),
+    ...mapActions('Files', ['setHighlightedFile', 'loadIndicators', 'loadPreview', 'loadAvatars']),
     ...mapMutations('Files', [
       'LOAD_FILES',
       'SELECT_RESOURCES',
@@ -135,6 +144,25 @@ export default {
       'UPDATE_RESOURCE'
     ]),
     ...mapMutations(['SET_QUOTA']),
+
+    rowMounted(resource, component) {
+      const debounced = debounce(({ unobserve }) => {
+        unobserve()
+        this.loadAvatars({ resource })
+
+        if (!this.displayPreviews) {
+          return
+        }
+
+        this.loadPreview({
+          resource,
+          isPublic: false,
+          dimensions: [25, 25]
+        })
+      })
+
+      visibilityObserver.observe(component.$el, { onEnter: debounced, onExit: debounced.cancel })
+    },
 
     async loadResources() {
       this.loading = true
@@ -169,16 +197,6 @@ export default {
       )
 
       this.LOAD_FILES({ currentFolder: rootFolder, files: resources })
-
-      if (this.displayPreviews) {
-        await this.loadPreviews({
-          resources,
-          isPublic: false,
-          mediaSource: this.mediaSource,
-          encodePath: this.encodePath,
-          headers: this.requestHeaders
-        })
-      }
 
       // Load quota
       const user = await this.$client.users.getUser(this.user.id)

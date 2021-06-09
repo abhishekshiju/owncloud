@@ -1,6 +1,6 @@
 import { loadTheme } from 'web-runtime/src/helpers/theme'
 import store from 'web-runtime/src/store'
-import { objectKeys } from 'web-pkg/src/common'
+import { objectKeys } from 'web-pkg/src/utils'
 import get from 'lodash-es/get'
 import difference from 'lodash-es/difference'
 
