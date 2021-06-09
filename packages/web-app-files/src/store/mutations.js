@@ -320,5 +320,9 @@ export default {
       files.splice(index, 1, resource)
       state.files = files
     }
+  },
+
+  UPDATE_CURRENT_PAGE(state, page) {
+    state.currentPage = parseInt(page, 10)
   }
 }

@@ -54,22 +54,31 @@
             :header-position="headerPosition"
           >
             <template #footer>
-              <div
-                v-if="activeFilesCount.folders > 0 || activeFilesCount.files > 0"
-                class="uk-text-nowrap oc-text-muted uk-text-center uk-width-1-1"
-              >
-                <span id="files-list-count-folders" v-text="activeFilesCount.folders" />
-                <translate :translate-n="activeFilesCount.folders" translate-plural="folders"
-                  >folder</translate
+              <div class="uk-flex uk-flex-middle uk-flex-between">
+                <oc-pagination
+                  v-if="paginationLength > 1"
+                  :pages="paginationLength"
+                  :current-page="currentPage"
+                  :max-displayed="2"
+                  :current-route="$_filesListPagination_targetRoute"
+                />
+                <div
+                  v-if="activeFilesCount.folders > 0 || activeFilesCount.files > 0"
+                  class="uk-text-nowrap oc-text-muted uk-text-right uk-flex-1"
                 >
-                <translate>and</translate>
-                <span id="files-list-count-files" v-text="activeFilesCount.files" />
-                <translate :translate-n="activeFilesCount.files" translate-plural="files"
-                  >file</translate
-                >
-                <template v-if="activeFiles.length > 0">
-                  &ndash; {{ getResourceSize(filesTotalSize) }}
-                </template>
+                  <span id="files-list-count-folders" v-text="activeFilesCount.folders" />
+                  <translate :translate-n="activeFilesCount.folders" translate-plural="folders"
+                    >folder</translate
+                  >
+                  <translate>and</translate>
+                  <span id="files-list-count-files" v-text="activeFilesCount.files" />
+                  <translate :translate-n="activeFilesCount.files" translate-plural="files"
+                    >file</translate
+                  >
+                  <template v-if="activeFiles.length > 0">
+                    &ndash; {{ getResourceSize(filesTotalSize) }}
+                  </template>
+                </div>
               </div>
             </template>
           </oc-table-files>
@@ -87,6 +96,7 @@ import { cloneStateObject } from '../helpers/store'
 import MixinsGeneral from '../mixins'
 import MixinResources from '../mixins/resources'
 import MixinRoutes from '../mixins/routes'
+import MixinFilesListPagination from '../mixins/filesListPagination'
 
 import MoveSidebarMainContent from '../components/LocationPicker/MoveSidebarMainContent.vue'
 import NoContentMessage from '../components/NoContentMessage.vue'
@@ -99,7 +109,7 @@ export default {
     ListLoader
   },
 
-  mixins: [MixinsGeneral, MixinResources, MixinRoutes],
+  mixins: [MixinsGeneral, MixinResources, MixinRoutes, MixinFilesListPagination],
 
   metaInfo() {
     const translated =
@@ -125,7 +135,8 @@ export default {
     ...mapState('Files', [
       'selectedResourcesForMove',
       'locationPickerTargetFolder',
-      'currentFolder'
+      'currentFolder',
+      'currentPage'
     ]),
     ...mapGetters('Files', [
       'activeFiles',
@@ -134,7 +145,8 @@ export default {
       'publicLinkPassword',
       'davProperties',
       'activeFilesCount',
-      'filesTotalSize'
+      'filesTotalSize',
+      'paginationLength'
     ]),
     ...mapGetters('configuration'),
 
@@ -260,7 +272,10 @@ export default {
 
   watch: {
     $route: {
-      handler: 'navigateToTarget',
+      handler: function() {
+        this.navigateToTarget(this.$route)
+        this.$_filesListPagination_updateCurrentPage()
+      },
       immediate: true
     }
   },
@@ -323,6 +338,7 @@ export default {
     },
 
     async navigateToTarget(target) {
+      console.log(this.$route)
       this.loading = true
       this.CLEAR_CURRENT_FILES_LIST()
 

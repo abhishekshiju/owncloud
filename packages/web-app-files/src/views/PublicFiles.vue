@@ -31,22 +31,31 @@
         @fileClick="$_fileActions_triggerDefaultAction"
       >
         <template #footer>
-          <div
-            v-if="activeFilesCount.folders > 0 || activeFilesCount.files > 0"
-            class="uk-text-nowrap oc-text-muted uk-text-center uk-width-1-1"
-          >
-            <span id="files-list-count-folders" v-text="activeFilesCount.folders" />
-            <translate :translate-n="activeFilesCount.folders" translate-plural="folders"
-              >folder</translate
+          <div class="uk-flex uk-flex-middle uk-flex-between">
+            <oc-pagination
+              v-if="paginationLength > 1"
+              :pages="paginationLength"
+              :current-page="currentPage"
+              :max-displayed="2"
+              :current-route="$_filesListPagination_targetRoute"
+            />
+            <div
+              v-if="activeFilesCount.folders > 0 || activeFilesCount.files > 0"
+              class="uk-text-nowrap oc-text-muted uk-text-right uk-flex-1"
             >
-            <translate>and</translate>
-            <span id="files-list-count-files" v-text="activeFilesCount.files" />
-            <translate :translate-n="activeFilesCount.files" translate-plural="files"
-              >file</translate
-            >
-            <template v-if="activeFiles.length > 0">
-              &ndash; {{ getResourceSize(filesTotalSize) }}
-            </template>
+              <span id="files-list-count-folders" v-text="activeFilesCount.folders" />
+              <translate :translate-n="activeFilesCount.folders" translate-plural="folders"
+                >folder</translate
+              >
+              <translate>and</translate>
+              <span id="files-list-count-files" v-text="activeFilesCount.files" />
+              <translate :translate-n="activeFilesCount.files" translate-plural="files"
+                >file</translate
+              >
+              <template v-if="activeFiles.length > 0">
+                &ndash; {{ getResourceSize(filesTotalSize) }}
+              </template>
+            </div>
           </div>
         </template>
       </oc-table-files>
@@ -55,12 +64,13 @@
 </template>
 
 <script>
-import { mapGetters, mapActions, mapMutations } from 'vuex'
+import { mapGetters, mapActions, mapMutations, mapState } from 'vuex'
 
 import { buildResource } from '../helpers/resources'
 import FileActions from '../mixins/fileActions'
 import MixinFilesListPositioning from '../mixins/filesListPositioning'
 import MixinResources from '../mixins/resources'
+import MixinFilesListPagination from '../mixins/filesListPagination'
 
 import ListLoader from '../components/ListLoader.vue'
 import NoContentMessage from '../components/NoContentMessage.vue'
@@ -73,13 +83,14 @@ export default {
     NotFoundMessage
   },
 
-  mixins: [FileActions, MixinFilesListPositioning, MixinResources],
+  mixins: [FileActions, MixinFilesListPositioning, MixinResources, MixinFilesListPagination],
 
   data: () => ({
     loading: true
   }),
 
   computed: {
+    ...mapState('Files', ['currentPage']),
     ...mapGetters('Files', [
       'publicLinkPassword',
       'activeFiles',
@@ -90,7 +101,8 @@ export default {
       'inProgress',
       'currentFolder',
       'activeFilesCount',
-      'filesTotalSize'
+      'filesTotalSize',
+      'paginationLength'
     ]),
     ...mapGetters(['configuration']),
 
@@ -130,7 +142,10 @@ export default {
 
   watch: {
     $route: {
-      handler: 'loadResources',
+      handler: function() {
+        this.loadResources()
+        this.$_filesListPagination_updateCurrentPage()
+      },
       immediate: true
     },
 
