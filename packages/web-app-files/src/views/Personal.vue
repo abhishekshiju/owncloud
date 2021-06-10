@@ -148,7 +148,7 @@ export default {
 
   watch: {
     $route: {
-      handler: function() {
+      handler: function(to, from) {
         if (isNil(this.$route.params.item)) {
           this.$router.push({
             name: 'files-personal',
