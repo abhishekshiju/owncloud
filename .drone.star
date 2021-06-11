@@ -1069,7 +1069,7 @@ def acceptance(ctx):
                             errorFound = True
 
                         # Basic steps and services for all testing
-                        steps = installNPM()
+                        steps = checkToRun() + installNPM()
                         if (params["oc10IntegrationAppIncluded"]):
                             steps += buildWebApp()
                         else:
@@ -1154,6 +1154,9 @@ def acceptance(ctx):
                                 "base": "/var/www/owncloud",
                                 "path": config["app"],
                             },
+                            "environment": {
+                                "DO_WE_RUN": True
+                            },
                             "steps": steps,
                             "services": services,
                             "depends_on": ["cache-ocis"] if (params["runningOnOCIS"]) else [],
@@ -1187,6 +1190,18 @@ def acceptance(ctx):
         return False
 
     return pipelines
+
+
+def checkToRun():
+    return [{
+        "image": "owncloudci/nodejs:14",
+        "pull": "always",
+        "commands": [
+            "echo $DO_WE_RUN",
+            "export DO_WE_RUN=False",
+            "echo $DO_WE_RUN",
+        ],
+    }]
 
 def notify():
     pipelines = []
@@ -1513,6 +1528,7 @@ def installNPM():
         "image": "owncloudci/nodejs:14",
         "pull": "always",
         "commands": [
+            "echo $DO_WE_RUN",
             "yarn install --frozen-lockfile",
         ],
     }]
